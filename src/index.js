@@ -10,7 +10,7 @@
 let ed = require("@noble/ed25519");
 import { blake2b } from "@noble/hashes/blake2b";
 
-let requestBody = {
+let sampleRequest = {
   context: {
     domain: "ONDC:RET12",
     country: "IND",
@@ -87,9 +87,21 @@ function uint8ArrayToBase64(u8a) {
 
 export default {
   async fetch(request, env, ctx) {
-    request = JSON.stringify(requestBody);
+    const url = new URL(request.url);
+    const queryParams = Object.fromEntries(url.searchParams.entries());
+    console.log(queryParams);
 
-    const data = new TextEncoder().encode(request);
+    // Check if there are any query parameters
+    let requestBody;
+    let queryPresent = 1;
+    if (queryParams.key) {
+      requestBody = queryParams.key;
+    } else {
+      queryPresent = 0;
+      requestBody = sampleRequest;
+    }
+
+    const data = new TextEncoder().encode(requestBody);
 
     const hash = blake2b(data, { dkLen: 64 });
 
@@ -99,7 +111,7 @@ export default {
 
     let signingString = `digest: BLAKE-512=${noblehash}`;
 
-    let privKey = "V72gCI173DsCYXVK87F+pXl3pz1jbs2MDknvTYDWnnk=";
+    let privKey = "ip5u2rhmLSBGLvTIjJCh2MnhguL8Sqc0saxYs113dRw=";
     // Convert the Base64 private key to Uint8Array (raw bytes)
     privKey = Uint8Array.from(atob(privKey), (c) => c.charCodeAt(0));
 
@@ -113,11 +125,15 @@ export default {
     const signature = await ed.signAsync(message, privKey);
     let signatureBase64 = uint8ArrayToBase64(signature);
 
-    return new Response(
-      JSON.stringify({
-        signature: signatureBase64,
-        blake2bhash: noblehash,
-      })
-    );
+    let result = {
+      blake2b_hash: noblehash,
+      signature: signatureBase64,
+    };
+
+    if (queryPresent) {
+      result.query_passed = requestBody;
+    }
+
+    return new Response(JSON.stringify(result));
   },
 };
