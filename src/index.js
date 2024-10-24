@@ -127,13 +127,16 @@ export default {
 
     let result = {
       blake2b_hash: noblehash,
-      signature: signatureBase64,
+      ed25519_signature: signatureBase64,
     };
 
     if (queryPresent) {
       result.query_passed = requestBody;
     }
 
-    return new Response(JSON.stringify(result));
+    return new Response(JSON.stringify(result), {
+      headers: { "Content-Type": "application/json" },
+      status: 200,
+    });
   },
 };
